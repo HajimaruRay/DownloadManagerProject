@@ -47,6 +47,16 @@ public class DownloadManagerServer {
     }
 
     private static void handleClient(Socket clientSocket, BufferedReader reader, PrintWriter writer) throws Exception {
+        String handcheck = reader.readLine();
+        if (handcheck.equalsIgnoreCase("fileList")) {
+            File[] files = SHARED_DIR.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    writer.println(file.getName() + " " + file.length()/(1024 * 1024) + " MB");
+                }
+            }
+            writer.println("END_OF_LIST");
+        }
         String fileName = reader.readLine();
         long startByte = Long.parseLong(reader.readLine());
         long endByte = Long.parseLong(reader.readLine());
@@ -105,6 +115,7 @@ class ServerHandler implements Runnable {
             } else if (mode.equalsIgnoreCase("Buffered")) {
                 BufferedSent.sendFile(clientSocket, UserRequestedFile, start, end);
             }
+            return;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -142,6 +153,7 @@ class ZeroCopySent {
 
                 System.out.println(Thread.currentThread().getName() +
                         " completed Zero-Copy transfer: " + totalTransferred + " bytes for file: " + file.getName());
+                return;
             }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -172,6 +184,7 @@ class BufferedSent {
             bos.flush();
             System.out.println(Thread.currentThread().getName() +
                     " Buffered send completed: " + totalSent + " bytes for file: " + file.getName());
+            return;
         } catch (Exception e) {
             e.printStackTrace();
         }

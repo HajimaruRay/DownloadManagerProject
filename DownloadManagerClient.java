@@ -38,19 +38,24 @@ public class DownloadManagerClient {
                         new InputStreamReader(requestSocket.getInputStream()))) {
 
             System.out.println("Connected to server: " + client.Serverip + " on port " + PORT);
-            System.out.print("Please enter file name or 'e' to exit: ");
+            requestWriter.write("fileList\n");
+            requestWriter.flush();
+            String response;
+            System.out.println("Available files on server:");
+            while (!(response = requestReader.readLine()).equals("END_OF_LIST")) {
+                System.out.println("- " + response);
+            }
+            System.out.print("Please enter file name to download: ");
             String fileName = sc.nextLine().trim();
             if (fileName.isEmpty()) {
                 System.out.println("Invalid file URL.");
-                return;
-            } else if (fileName.equals("e")) {
                 return;
             }
 
             System.out.println("Requesting file: " + fileName);
             requestWriter.write(fileName + "\n0\n" + Long.MAX_VALUE + "\n");
             requestWriter.flush();
-            String response = requestReader.readLine();
+            response = requestReader.readLine();
             System.out.println("Server response: " + response);
             if (!response.equals("OK")) {
                 System.out.println(response);
@@ -122,7 +127,11 @@ public class DownloadManagerClient {
                         (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
             }
 
-            MergeFiles.mergeFiles(DOWNLOAD_DIR, fileName, THREADS);
+            if (mode.equalsIgnoreCase("ZeroCopy")) {
+                MergeFilesZeroCopy.mergeFiles(DOWNLOAD_DIR, fileName, THREADS);
+            } else if (mode.equalsIgnoreCase("Buffered")) {
+                MergeFilesBuffer.mergeFiles(DOWNLOAD_DIR, fileName, THREADS);
+            }
             System.out.println("Download finished. Press Enter to exit...");
             sc.nextLine();
             sc.close();
@@ -160,6 +169,8 @@ class ClientHandler implements Runnable {
     @Override
     public void run() {
         try {
+            writer.write("Download\n");
+            writer.flush();
             writer.write(UserRequestedFile + "\n" + start + "\n" + end + "\n" + mode + "\n");
             writer.flush();
 
@@ -189,9 +200,54 @@ class ClientHandler implements Runnable {
     }
 }
 
-class MergeFiles {
+class MergeFilesZeroCopy {
     public static void mergeFiles(File downloadDir, String originalFileName, int numberOfChunks) {
-        File outputFile = new File(downloadDir, originalFileName);
+        long startTime = System.currentTimeMillis();
+        File outputFile = new File(downloadDir, "ZeroCopy_" + originalFileName);
+
+        try (FileChannel outChannel = new FileOutputStream(outputFile, false).getChannel()) {
+            for (int i = 0; i < numberOfChunks; i++) {
+                String chunkFileName = "chunk_" + i + "_" + originalFileName;
+                File chunkFile = new File(downloadDir, chunkFileName);
+
+                if (!chunkFile.exists()) {
+                    System.out.println("Warning: Chunk file not found: " + chunkFileName);
+                    continue;
+                }
+
+                try (FileChannel inChannel = new FileInputStream(chunkFile).getChannel()) {
+                    long size = inChannel.size();
+                    long transferred = 0;
+
+                    // ใช้ transferTo แบบ Zero-Copy
+                    while (transferred < size) {
+                        transferred += inChannel.transferTo(transferred, size - transferred, outChannel);
+                    }
+
+                    System.out.println("Merged chunk " + i + ": " + chunkFileName);
+                } catch (IOException e) {
+                    System.out.println("Error reading chunk " + i + ": " + e.getMessage());
+                    continue;
+                }
+
+                if (!chunkFile.delete()) {
+                    System.out.println("Warning: Could not delete chunk file: " + chunkFileName);
+                }
+            }
+
+            System.out.println("Files merged successfully into: " + outputFile.getAbsolutePath());
+            System.out.println("Merge time (ZeroCopy): " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
+        } catch (IOException e) {
+            System.out.println("Error creating output file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+
+class MergeFilesBuffer {
+    public static void mergeFiles(File downloadDir, String originalFileName, int numberOfChunks) {
+        long startTime = System.currentTimeMillis();
+        File outputFile = new File(downloadDir, "Buffered_" + originalFileName);
         try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(outputFile))) {
             for (int i = 0; i < numberOfChunks; i++) {
                 String chunkFileName = "chunk_" + i + "_" + originalFileName;
@@ -219,6 +275,7 @@ class MergeFiles {
                 }
             }
             System.out.println("Files merged successfully into: " + outputFile.getAbsolutePath());
+            System.out.println("Merge time (Buffered): " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
         } catch (IOException e) {
             System.out.println("Error creating output file: " + e.getMessage());
             e.printStackTrace();
