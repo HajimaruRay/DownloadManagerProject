@@ -63,10 +63,9 @@ public class DownloadManagerClient {
             }
             requestWriter.write(mode + "\n");
             requestWriter.flush();
-            if(mode.equalsIgnoreCase("ZeroCopy")){
+            if (mode.equalsIgnoreCase("ZeroCopy")) {
                 System.out.println("Downloading using ZeroCopy mode.");
-            }
-            else if(mode.equalsIgnoreCase("Buffered")){
+            } else if (mode.equalsIgnoreCase("Buffered")) {
                 System.out.println("Downloading using Buffered mode.");
             }
 
@@ -115,11 +114,10 @@ public class DownloadManagerClient {
                 }
             }
             System.out.println("All downloads completed!");
-            if (mode.equalsIgnoreCase("ZeroCopy")){
+            if (mode.equalsIgnoreCase("ZeroCopy")) {
                 System.out.println("Download time in zerocopy: " +
                         (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
-            }
-            else{
+            } else {
                 System.out.println("Download time in buffered: " +
                         (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
             }

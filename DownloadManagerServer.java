@@ -22,8 +22,9 @@ public class DownloadManagerServer {
                 System.out.println("New client connected: " + clientSocket.getInetAddress());
 
                 new Thread(() -> {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                         PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true)) {
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(clientSocket.getInputStream()));
+                            PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
                         handleClient(clientSocket, reader, writer);
 
@@ -49,7 +50,8 @@ public class DownloadManagerServer {
         String fileName = reader.readLine();
         long startByte = Long.parseLong(reader.readLine());
         long endByte = Long.parseLong(reader.readLine());
-        System.out.println(Thread.currentThread().getName() + "Client requested file: " + fileName + " from byte " + startByte + " to " + endByte);
+        System.out.println(Thread.currentThread().getName() + "Client requested file: " + fileName + " from byte "
+                + startByte + " to " + endByte);
 
         File requestedFile = new File(SHARED_DIR, fileName);
         if (!requestedFile.exists()) {
@@ -111,14 +113,15 @@ class ServerHandler implements Runnable {
 
 class ZeroCopySent {
     static void sendFile(Socket socket, File file, long start, long end) {
-        System.out.println(Thread.currentThread().getName() + " Starting Zero-Copy download for file: " + file.getName() + " in range: " + start + " - " + end);
+        System.out.println(Thread.currentThread().getName() + " Starting Zero-Copy download for file: " + file.getName()
+                + " in range: " + start + " - " + end);
         try {
 
             Thread.sleep(100);
-            
+
             try (FileInputStream fis = new FileInputStream(file);
-                 FileChannel fileChannel = fis.getChannel();
-                 WritableByteChannel socketChannel = Channels.newChannel(socket.getOutputStream())) {
+                    FileChannel fileChannel = fis.getChannel();
+                    WritableByteChannel socketChannel = Channels.newChannel(socket.getOutputStream())) {
 
                 long bytesToTransfer = end - start + 1;
                 long position = start;
@@ -137,8 +140,8 @@ class ZeroCopySent {
                     totalTransferred += transferred;
                 }
 
-                System.out.println(Thread.currentThread().getName() + 
-                                 " completed Zero-Copy transfer: " + totalTransferred + " bytes for file: " + file.getName());
+                System.out.println(Thread.currentThread().getName() +
+                        " completed Zero-Copy transfer: " + totalTransferred + " bytes for file: " + file.getName());
             }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -151,10 +154,11 @@ class BufferedSent {
         final int BUFFER_SIZE = 64 * 1024;
         long bytesToSend = end - start + 1;
         long totalSent = 0;
-        System.out.println(Thread.currentThread().getName() +" (Buffered) Sending file: " + file.getName() +" range " + start + "-" + end);
+        System.out.println(Thread.currentThread().getName() + " (Buffered) Sending file: " + file.getName() + " range "
+                + start + "-" + end);
 
         try (BufferedOutputStream bos = new BufferedOutputStream(socket.getOutputStream(), BUFFER_SIZE);
-             RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+                RandomAccessFile raf = new RandomAccessFile(file, "r")) {
 
             raf.seek(start);
             byte[] buffer = new byte[BUFFER_SIZE];
