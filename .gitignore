@@ -1,0 +1,13 @@
+# Java build artifacts
+*.class
+
+# IDE configuration
+.idea/
+.vscode/
+*.iml
+
+# Downloaded files
+Downloaded/
+
+# macOS metadata
+.DS_Store
