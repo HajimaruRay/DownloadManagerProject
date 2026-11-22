@@ -5,9 +5,11 @@
 .idea/
 .vscode/
 *.iml
+._*
 
 # Downloaded files
 Downloaded/
+SharedFiles/
 
 # macOS metadata
 .DS_Store
